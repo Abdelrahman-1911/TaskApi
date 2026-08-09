@@ -15,7 +15,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // ----------------------------------------------------
-// In-Memory Database (Stage 2)
+// In-Memory Database
 // ----------------------------------------------------
 var tasks = new List<TaskItem>
 {
@@ -41,15 +41,12 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
 .WithOpenApi();
 
 // ----------------------------------------------------
-// Stage 2: Read Endpoints (GET /tasks & GET /tasks/{id})
+// Stage 2: Read Endpoints
 // ----------------------------------------------------
-
-// 1. GET /tasks - عرض كل المهام
 app.MapGet("/tasks", () => Results.Ok(tasks))
 .WithName("GetAllTasks")
 .WithOpenApi();
 
-// 2. GET /tasks/{id} - عرض مهمة واحدة محددة
 app.MapGet("/tasks/{id:int}", (int id) =>
 {
     var task = tasks.FirstOrDefault(t => t.Id == id);
@@ -62,14 +59,49 @@ app.MapGet("/tasks/{id:int}", (int id) =>
 .WithName("GetTaskById")
 .WithOpenApi();
 
+// ----------------------------------------------------
+// Stage 3: Create Endpoint (POST /tasks)
+// ----------------------------------------------------
+app.MapPost("/tasks", (CreateTaskDto input) =>
+{
+    // Validation: التأكد إن العنوان مش فاضي
+    if (string.IsNullOrWhiteSpace(input.Title))
+    {
+        return Results.BadRequest(new { error = "Title is required and cannot be empty" });
+    }
+
+    // توليد ID جديد تلقائياً
+    int nextId = tasks.Any() ? tasks.Max(t => t.Id) + 1 : 1;
+
+    var newTask = new TaskItem
+    {
+        Id = nextId,
+        Title = input.Title.Trim(),
+        Done = false
+    };
+
+    tasks.Add(newTask);
+
+    // ارجاع 201 Created ومكان العنصر الجديد
+    return Results.Created($"/tasks/{newTask.Id}", newTask);
+})
+.WithName("CreateTask")
+.WithOpenApi();
+
 app.Run();
 
 // ----------------------------------------------------
-// Task Model Class
+// Models & DTOs
 // ----------------------------------------------------
 public class TaskItem
 {
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public bool Done { get; set; }
+}
+
+// DTO لاستقبال بيانات الإنشاء فقط من العميل
+public class CreateTaskDto
+{
+    public string Title { get; set; } = string.Empty;
 }
