@@ -1,8 +1,6 @@
 using Swashbuckle.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// إضافة خدمات Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -14,123 +12,51 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// ----------------------------------------------------
-// In-Memory Database
-// ----------------------------------------------------
 var tasks = new List<TaskItem>
 {
-    new TaskItem { Id = 1, Title = "Learn .NET Minimal APIs", Done = true },
-    new TaskItem { Id = 2, Title = "Build CRUD Endpoints", Done = false },
-    new TaskItem { Id = 3, Title = "Publish to GitHub", Done = false }
+    new() { Id = 1, Title = "Learn .NET Minimal APIs", Done = true },
+    new() { Id = 2, Title = "Build CRUD Endpoints", Done = false },
+    new() { Id = 3, Title = "Publish to GitHub", Done = false }
 };
 
-// ----------------------------------------------------
-// Stage 1: Root & Health Endpoints
-// ----------------------------------------------------
-app.MapGet("/", () => Results.Ok(new
-{
-    name = "Task API",
-    version = "1.0",
-    endpoints = new[] { "/tasks", "/health" }
-}))
-.WithName("GetRoot")
-.WithOpenApi();
+app.MapGet("/", () => Results.Ok(new { name = "Task API", version = "1.0", endpoints = new[] { "/tasks", "/health" } })).WithName("GetRoot").WithOpenApi();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithName("GetHealth").WithOpenApi();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
-.WithName("GetHealth")
-.WithOpenApi();
-
-// ----------------------------------------------------
-// Stage 2: Read Endpoints
-// ----------------------------------------------------
-app.MapGet("/tasks", () => Results.Ok(tasks))
-.WithName("GetAllTasks")
-.WithOpenApi();
+app.MapGet("/tasks", () => Results.Ok(tasks)).WithName("GetAllTasks").WithOpenApi();
 
 app.MapGet("/tasks/{id:int}", (int id) =>
-{
-    var task = tasks.FirstOrDefault(t => t.Id == id);
-    if (task is null)
-    {
-        return Results.NotFound(new { error = $"Task {id} not found" });
-    }
-    return Results.Ok(task);
-})
-.WithName("GetTaskById")
-.WithOpenApi();
+    tasks.FirstOrDefault(t => t.Id == id) is TaskItem t ? Results.Ok(t) : Results.NotFound(new { error = $"Task {id} not found" })
+).WithName("GetTaskById").WithOpenApi();
 
-// ----------------------------------------------------
-// Stage 3: Create Endpoint (POST /tasks)
-// ----------------------------------------------------
 app.MapPost("/tasks", (CreateTaskDto input) =>
 {
-    if (string.IsNullOrWhiteSpace(input.Title))
-    {
-        return Results.BadRequest(new { error = "Title is required and cannot be empty" });
-    }
-
+    if (string.IsNullOrWhiteSpace(input.Title)) return Results.BadRequest(new { error = "Title is required" });
     int nextId = tasks.Any() ? tasks.Max(t => t.Id) + 1 : 1;
-
-    var newTask = new TaskItem
-    {
-        Id = nextId,
-        Title = input.Title.Trim(),
-        Done = false
-    };
-
+    var newTask = new TaskItem { Id = nextId, Title = input.Title.Trim(), Done = false };
     tasks.Add(newTask);
-
     return Results.Created($"/tasks/{newTask.Id}", newTask);
-})
-.WithName("CreateTask")
-.WithOpenApi();
+}).WithName("CreateTask").WithOpenApi();
 
-// ----------------------------------------------------
-// Stage 4: Update Endpoint (PUT /tasks/{id})
-// ----------------------------------------------------
 app.MapPut("/tasks/{id:int}", (int id, UpdateTaskDto input) =>
 {
     var task = tasks.FirstOrDefault(t => t.Id == id);
-    if (task is null)
-    {
-        return Results.NotFound(new { error = $"Task {id} not found" });
-    }
-
-    if (string.IsNullOrWhiteSpace(input.Title))
-    {
-        return Results.BadRequest(new { error = "Title cannot be empty" });
-    }
-
+    if (task is null) return Results.NotFound(new { error = $"Task {id} not found" });
+    if (string.IsNullOrWhiteSpace(input.Title)) return Results.BadRequest(new { error = "Title cannot be empty" });
     task.Title = input.Title.Trim();
     task.Done = input.Done;
-
     return Results.Ok(task);
-})
-.WithName("UpdateTask")
-.WithOpenApi();
+}).WithName("UpdateTask").WithOpenApi();
 
-// ----------------------------------------------------
-// Stage 4: Delete Endpoint (DELETE /tasks/{id})
-// ----------------------------------------------------
 app.MapDelete("/tasks/{id:int}", (int id) =>
 {
     var task = tasks.FirstOrDefault(t => t.Id == id);
-    if (task is null)
-    {
-        return Results.NotFound(new { error = $"Task {id} not found" });
-    }
-
+    if (task is null) return Results.NotFound(new { error = $"Task {id} not found" });
     tasks.Remove(task);
-    return Results.NoContent(); // Returns 204 No Content
-})
-.WithName("DeleteTask")
-.WithOpenApi();
+    return Results.NoContent();
+}).WithName("DeleteTask").WithOpenApi();
 
 app.Run();
 
-// ----------------------------------------------------
-// Models & DTOs
-// ----------------------------------------------------
 public class TaskItem
 {
     public int Id { get; set; }
@@ -138,13 +64,5 @@ public class TaskItem
     public bool Done { get; set; }
 }
 
-public class CreateTaskDto
-{
-    public string Title { get; set; } = string.Empty;
-}
-
-public class UpdateTaskDto
-{
-    public string Title { get; set; } = string.Empty;
-    public bool Done { get; set; }
-}
+public class CreateTaskDto { public string Title { get; set; } = string.Empty; }
+public class UpdateTaskDto { public string Title { get; set; } = string.Empty; public bool Done { get; set; } }
