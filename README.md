@@ -21,7 +21,7 @@ A lightweight To-Do List CRUD API built with **ASP.NET Core Minimal APIs** and C
 | `DELETE` | `/tasks/{id}` | Delete a task | 204 No Content | 404 Not Found |
 
 ## 🛠️ How to Run
-1. Make sure [.NET 8 SDK](https://dotnet.microsoft.com/download) is installed.
+1. Make sure [.NET 10 SDK](https://dotnet.microsoft.com/download) is installed.
 2. Clone the repository:
    ```bash
    git clone <YOUR_GITHUB_REPO_URL>
